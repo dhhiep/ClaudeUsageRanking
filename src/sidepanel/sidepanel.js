@@ -244,13 +244,8 @@ class SidePanelController {
         useCache: this.useCache
       });
 
-      if (response.error === 'SESSION_EXPIRED') {
-        this.showEmptyState('Session expired. Please login to Claude platform and refresh.');
-        return;
-      }
-
-      if (response.error === 'NO_IDS') {
-        this.showEmptyState('Visit Claude platform cost page once to activate.');
+      if (response.error) {
+        this.showToast(response.message || response.error, 'error');
         return;
       }
 
@@ -264,7 +259,7 @@ class SidePanelController {
       }
     } catch (error) {
       console.error('[Claude Extension] fetchData failed:', error);
-      this.showEmptyState('Error fetching data');
+      this.showToast('Failed to fetch data', 'error');
     } finally {
       this.hideLoadingIndicator();
     }
@@ -455,6 +450,16 @@ class SidePanelController {
     document.getElementById('table-body').innerHTML = `
       <tr><td colspan="4" class="empty-state"><p>${message}</p></td></tr>
     `;
+  }
+
+  showToast(message, type = 'error', duration = 5000) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.className = `toast ${type} show`;
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => {
+      toast.classList.remove('show');
+    }, duration);
   }
 
   escapeHtml(str) {
