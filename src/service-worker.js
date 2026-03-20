@@ -131,11 +131,20 @@ function generateRanking(userCosts) {
 
 // --- Direct API fetching ---
 
+// Parse API error response: { type: "error", error: { message: "..." } }
+async function parseApiError(res) {
+  try {
+    const body = await res.json();
+    if (body?.error?.message) return body.error.message;
+  } catch {}
+  return `API error: ${res.status}`;
+}
+
 async function fetchApiKeys(orgId, wsId) {
   const url = `https://platform.claude.com/api/console/organizations/${orgId}/workspaces/${wsId}/api_keys`;
   const res = await fetch(url, { credentials: 'include' });
   if (res.status === 401) throw new Error('SESSION_EXPIRED');
-  if (!res.ok) throw new Error(`API keys fetch failed: ${res.status}`);
+  if (!res.ok) throw new Error(await parseApiError(res));
   return res.json();
 }
 
@@ -145,7 +154,7 @@ async function fetchUsageCost(orgId, wsId, startDate, endDate) {
   const url = `https://platform.claude.com/api/organizations/${orgId}/workspaces/${wsId}/usage_cost?starting_on=${startDate}&ending_before=${endBefore}&group_by=api_key_id`;
   const res = await fetch(url, { credentials: 'include' });
   if (res.status === 401) throw new Error('SESSION_EXPIRED');
-  if (!res.ok) throw new Error(`Usage cost fetch failed: ${res.status}`);
+  if (!res.ok) throw new Error(await parseApiError(res));
   const data = await res.json();
   return data.costs || data;
 }
@@ -228,6 +237,7 @@ async function fetchAndMergeData(dateFrom, dateTo, useCache = true) {
         return { error: 'SESSION_EXPIRED', data: [], message: 'Session expired. Please login to Claude platform.' };
       }
       console.error(`[Claude Extension] Failed to fetch ${range.startDate} to ${range.endDate}:`, error);
+      return { error: 'API_ERROR', data: [], message: error.message };
     }
   }
 
