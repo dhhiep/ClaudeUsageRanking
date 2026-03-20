@@ -6,6 +6,17 @@
   <title>Claude Usage Ranking</title>
 </head>
 <body>
+  <!-- Navigation prompt overlay -->
+  <div id="navigate-prompt" class="navigate-prompt" style="display: none;">
+    <div class="navigate-prompt-content">
+      <div class="navigate-prompt-icon">&#x1F517;</div>
+      <h2>Setup Required</h2>
+      <p>Visit <strong>platform.claude.com</strong> once to activate the extension.</p>
+      <p class="navigate-prompt-current"><span id="current-url-display">--</span></p>
+      <button id="navigate-btn" class="btn-navigate">Go to Claude Platform</button>
+    </div>
+  </div>
+
   <div class="container">
     <header class="header">
       <h1>Claude Usage Ranking</h1>
@@ -14,6 +25,7 @@
           <span class="spinner"></span>
           Fetching...
         </span>
+        <button id="cache-toggle" class="btn-icon" title="Cache: on">💾</button>
         <button id="theme-toggle" class="btn-icon" title="Toggle Dark Mode">🌙</button>
         <button id="refresh-btn" class="btn-icon" title="Refresh">↻</button>
       </div>
@@ -37,9 +49,20 @@
 
     <div class="filters">
       <div class="filter-row">
-        <label>Search: <input type="text" id="search-input" placeholder="Filter by username..."></label>
-        <label>From: <input type="date" id="date-from"></label>
-        <label>To: <input type="date" id="date-to"></label>
+        <input type="text" id="search-input" placeholder="Filter by username...">
+      </div>
+      <div class="filter-row">
+        <select id="date-preset">
+          <option value="mtd">Month to Date</option>
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="last_7_days">Last 7 Days</option>
+          <option value="last_30_days">Last 30 Days</option>
+          <option value="last_month">Last Month</option>
+          <option value="custom">Custom</option>
+        </select>
+        <input type="date" id="date-from">
+        <input type="date" id="date-to">
       </div>
     </div>
 

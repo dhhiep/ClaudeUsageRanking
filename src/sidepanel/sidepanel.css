@@ -226,7 +226,15 @@ body.theme-dark .filter-row label {
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 12px;
-  max-width: 130px;
+  max-width: 140px;
+}
+
+#date-preset {
+  max-width: none;
+}
+
+#search-input {
+  flex: 1;
 }
 
 body.theme-dark .filter-row input[type="date"],
@@ -429,7 +437,6 @@ tbody tr:hover {
 
 #search-input {
   flex: 1;
-  max-width: 300px;
 }
 
 /* Loading Indicator */
@@ -458,6 +465,76 @@ body.theme-dark .loading-indicator {
 body.theme-dark .spinner {
   border-color: #3a3a3a;
   border-top-color: #4a9eff;
+}
+
+/* Navigate Prompt Overlay */
+.navigate-prompt {
+  position: fixed;
+  inset: 0;
+  background: #fff;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.theme-dark .navigate-prompt {
+  background: #1a1a1a;
+}
+
+.navigate-prompt-content {
+  text-align: center;
+  padding: 32px;
+  max-width: 320px;
+}
+
+.navigate-prompt-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.navigate-prompt-content h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.navigate-prompt-content p {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+body.theme-dark .navigate-prompt-content p {
+  color: #999;
+}
+
+.navigate-prompt-current {
+  font-size: 11px !important;
+  color: #999 !important;
+  word-break: break-all;
+  margin-bottom: 20px !important;
+}
+
+body.theme-dark .navigate-prompt-current {
+  color: #666 !important;
+}
+
+.btn-navigate {
+  background: #0066cc;
+  color: white;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.btn-navigate:hover {
+  background: #0052a3;
 }
 
 /* Remove old @media dark mode - now using theme classes */

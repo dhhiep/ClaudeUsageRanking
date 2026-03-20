@@ -5,8 +5,8 @@ class SidePanelController {
     this.searchQuery = '';
     this.sortColumn = 'totalCost';
     this.sortDirection = 'desc';
-    this.activeTab = 'summary';
-    this.theme = 'auto'; // auto, light, dark
+    this.theme = 'auto';
+    this.useCache = true;
 
     this.init();
   }
@@ -15,37 +15,55 @@ class SidePanelController {
     this.setupMessageListener();
     this.loadTheme();
     this.attachEventListeners();
+    this.setupNavigatePrompt();
     this.setDefaultDates();
-    await this.loadData();
+    await this.checkActivation();
+  }
+
+  // Check if IDs are stored — if yes, fetch data; if no, show setup prompt
+  async checkActivation() {
+    try {
+      const { hasIds } = await chrome.runtime.sendMessage({ action: 'CHECK_IDS' });
+      const prompt = document.getElementById('navigate-prompt');
+      const container = document.querySelector('.container');
+
+      if (!hasIds) {
+        prompt.style.display = 'flex';
+        container.style.display = 'none';
+        document.getElementById('current-url-display').textContent = 'IDs not captured yet';
+      } else {
+        prompt.style.display = 'none';
+        container.style.display = 'flex';
+        await this.fetchData();
+      }
+    } catch (error) {
+      console.error('[Claude Extension] checkActivation failed:', error);
+    }
+  }
+
+  setupNavigatePrompt() {
+    const navigateBtn = document.getElementById('navigate-btn');
+    if (navigateBtn) {
+      navigateBtn.addEventListener('click', async () => {
+        await chrome.runtime.sendMessage({ action: 'OPEN_CLAUDE_PLATFORM' });
+      });
+    }
   }
 
   setupMessageListener() {
-    // Listen for date range change notifications from service worker
     chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      console.log('[Claude Extension] Received message:', message.action);
-
-      if (message.action === 'RELOAD_DATE_RANGE') {
-        console.log('[Claude Extension] Received date range update:', message.dateRange);
-        if (message.dateRange) {
-          document.getElementById('date-from').value = message.dateRange.startDate;
-          document.getElementById('date-to').value = message.dateRange.endDate;
-        }
+      if (message.action === 'TAB_CHANGED') {
+        this.checkActivation();
         sendResponse({ success: true });
       }
 
-      if (message.action === 'DATA_FETCH_STARTED') {
-        console.log('[Claude Extension] Data fetch started, showing loading indicator');
-        this.showLoadingIndicator();
-        sendResponse({ success: true });
-      }
-
-      if (message.action === 'AUTO_REFRESH_DATA') {
-        console.log('[Claude Extension] Auto-refreshing with new data');
-        // Hide loading indicator and reload data
-        this.hideLoadingIndicator();
-        this.loadData().then(() => {
-          console.log('[Claude Extension] Auto-refresh complete');
-        });
+      // Sync when user changes date filter on Claude platform
+      if (message.action === 'PLATFORM_DATE_CHANGED') {
+        const { startDate, endDate } = message.dateRange;
+        document.getElementById('date-from').value = startDate;
+        document.getElementById('date-to').value = endDate;
+        this.syncPresetFromDates();
+        this.fetchData();
         sendResponse({ success: true });
       }
       return true;
@@ -63,9 +81,7 @@ class SidePanelController {
   applyTheme() {
     const body = document.body;
     body.classList.remove('theme-light', 'theme-dark');
-
     if (this.theme === 'auto') {
-      // Use system preference
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       body.classList.add(prefersDark ? 'theme-dark' : 'theme-light');
     } else {
@@ -84,52 +100,59 @@ class SidePanelController {
     const themes = ['auto', 'light', 'dark'];
     const currentIndex = themes.indexOf(this.theme);
     this.theme = themes[(currentIndex + 1) % themes.length];
-
     chrome.storage.local.set({ theme: this.theme });
     this.applyTheme();
     this.updateThemeButton();
   }
 
+  toggleCache() {
+    this.useCache = !this.useCache;
+    this.updateCacheButton();
+  }
+
+  updateCacheButton() {
+    const btn = document.getElementById('cache-toggle');
+    btn.textContent = this.useCache ? '💾' : '⚡';
+    btn.title = `Cache: ${this.useCache ? 'on' : 'off'}`;
+  }
+
   showLoadingIndicator() {
     const indicator = document.getElementById('loading-indicator');
-    if (indicator) {
-      indicator.style.display = 'flex';
-      console.log('[Claude Extension] Loading indicator shown');
-    } else {
-      console.error('[Claude Extension] Loading indicator element not found');
-    }
+    if (indicator) indicator.style.display = 'flex';
   }
 
   hideLoadingIndicator() {
     const indicator = document.getElementById('loading-indicator');
-    if (indicator) {
-      indicator.style.display = 'none';
-      console.log('[Claude Extension] Loading indicator hidden');
-    }
+    if (indicator) indicator.style.display = 'none';
   }
 
   attachEventListeners() {
-    // Theme toggle
+    document.getElementById('cache-toggle').addEventListener('click', () => this.toggleCache());
     document.getElementById('theme-toggle').addEventListener('click', () => this.cycleTheme());
+    document.getElementById('refresh-btn').addEventListener('click', () => this.fetchData());
 
-    // Refresh button
-    document.getElementById('refresh-btn').addEventListener('click', () => this.refreshData());
-
-    // Search input - real-time filter
+    // Search input — real-time local filter
     document.getElementById('search-input').addEventListener('input', (e) => {
       this.searchQuery = e.target.value.toLowerCase();
       this.applyLocalFilters();
     });
 
-    // Date pickers - auto-apply on change
-    document.getElementById('date-from').addEventListener('change', () => {
-      console.log('[Claude Extension] Date from changed, auto-applying filters');
-      this.applyFilters();
+    // Date preset dropdown
+    document.getElementById('date-preset').addEventListener('change', (e) => {
+      if (e.target.value !== 'custom') {
+        this.applyPreset(e.target.value);
+        this.fetchData();
+      }
     });
 
+    // Date pickers — trigger fetch and auto-detect matching preset
+    document.getElementById('date-from').addEventListener('change', () => {
+      this.syncPresetFromDates();
+      this.fetchData();
+    });
     document.getElementById('date-to').addEventListener('change', () => {
-      console.log('[Claude Extension] Date to changed, auto-applying filters');
-      this.applyFilters();
+      this.syncPresetFromDates();
+      this.fetchData();
     });
 
     // Sort headers
@@ -137,99 +160,127 @@ class SidePanelController {
       th.addEventListener('click', () => this.handleSort(th.dataset.sort));
     });
 
-    // Listen for system theme changes when in auto mode
+    // System theme changes
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
-      if (this.theme === 'auto') {
-        this.applyTheme();
-      }
+      if (this.theme === 'auto') this.applyTheme();
     });
   }
 
   setDefaultDates() {
-    const today = new Date();
-    const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-
-    document.getElementById('date-to').value = today.toISOString().split('T')[0];
-    document.getElementById('date-from').value = firstOfMonth.toISOString().split('T')[0];
+    this.applyPreset('mtd');
   }
 
-  async loadData() {
+  // Calculate UTC date strings for a preset
+  getPresetDates(preset) {
+    // Use UTC "today" to match Claude platform's date bucketing
+    const now = new Date();
+    const y = now.getUTCFullYear();
+    const m = now.getUTCMonth();
+    const d = now.getUTCDate();
+    const todayStr = this.formatDateValue(new Date(Date.UTC(y, m, d)));
+
+    const utcDate = (year, month, day) => this.formatDateValue(new Date(Date.UTC(year, month, day)));
+    const daysAgo = (n) => utcDate(y, m, d - n);
+
+    switch (preset) {
+      case 'today':
+        return { from: todayStr, to: todayStr };
+      case 'yesterday':
+        return { from: daysAgo(1), to: daysAgo(1) };
+      case 'last_7_days':
+        return { from: daysAgo(6), to: todayStr };
+      case 'last_30_days':
+        return { from: daysAgo(29), to: todayStr };
+      case 'last_month':
+        return { from: utcDate(y, m - 1, 1), to: utcDate(y, m, 0) };
+      case 'mtd':
+      default:
+        return { from: utcDate(y, m, 1), to: todayStr };
+    }
+  }
+
+  // Apply preset: set date inputs and dropdown
+  applyPreset(preset) {
+    const { from, to } = this.getPresetDates(preset);
+    document.getElementById('date-from').value = from;
+    document.getElementById('date-to').value = to;
+    document.getElementById('date-preset').value = preset;
+  }
+
+  // Auto-detect if current date inputs match a known preset
+  syncPresetFromDates() {
+    const dateFrom = document.getElementById('date-from').value;
+    const dateTo = document.getElementById('date-to').value;
+    const presets = ['mtd', 'today', 'yesterday', 'last_7_days', 'last_30_days', 'last_month'];
+
+    for (const preset of presets) {
+      const { from, to } = this.getPresetDates(preset);
+      if (dateFrom === from && dateTo === to) {
+        document.getElementById('date-preset').value = preset;
+        return;
+      }
+    }
+    document.getElementById('date-preset').value = 'custom';
+  }
+
+  formatDateValue(date) {
+    return date.toISOString().split('T')[0];
+  }
+
+  // Main data fetch — sends date range to service worker which does smart incremental fetch
+  async fetchData() {
+    const dateFrom = document.getElementById('date-from').value;
+    const dateTo = document.getElementById('date-to').value;
+    if (!dateFrom || !dateTo) return;
+
+    this.showLoadingIndicator();
     this.showLoading();
 
     try {
-      const response = await chrome.runtime.sendMessage({ action: 'GET_PROCESSED_DATA' });
+      const response = await chrome.runtime.sendMessage({
+        action: 'FETCH_DATE_RANGE',
+        dateFrom,
+        dateTo,
+        useCache: this.useCache
+      });
+
+      if (response.error === 'SESSION_EXPIRED') {
+        this.showEmptyState('Session expired. Please login to Claude platform and refresh.');
+        return;
+      }
+
+      if (response.error === 'NO_IDS') {
+        this.showEmptyState('Visit Claude platform cost page once to activate.');
+        return;
+      }
 
       if (response.data && response.data.length > 0) {
         this.data = response.data;
         this.filteredData = [...this.data];
-
-        // Update date inputs if date range is stored
-        if (response.dateRange) {
-          console.log('[Claude Extension] Loading date range:', response.dateRange);
-          document.getElementById('date-from').value = response.dateRange.startDate;
-          document.getElementById('date-to').value = response.dateRange.endDate;
-        } else {
-          console.log('[Claude Extension] No date range stored, using defaults');
-        }
-
         this.render();
         this.updateFooter(response.lastUpdated);
       } else {
         this.showEmptyState();
       }
     } catch (error) {
-      console.error('Failed to load data:', error);
-      this.showEmptyState('Error loading data');
+      console.error('[Claude Extension] fetchData failed:', error);
+      this.showEmptyState('Error fetching data');
+    } finally {
+      this.hideLoadingIndicator();
     }
   }
 
-  populateFilters() {
-    // Removed - no longer using model/token/usage/geo filters
-  }
-
-  populateSelect(id, values) {
-    // Removed - no longer using model/token/usage/geo filters
-  }
-
-  applyFilters() {
-    const dateFrom = document.getElementById('date-from').value;
-    const dateTo = document.getElementById('date-to').value;
-
-    console.log('[Claude Extension] Applying filters:', { dateFrom, dateTo });
-
-    // Show loading indicator while filtering
-    this.showLoadingIndicator();
-
-    chrome.runtime.sendMessage({
-      action: 'GET_FILTERED_DATA',
-      filters: { dateFrom, dateTo }
-    }, (response) => {
-      console.log('[Claude Extension] Filter response received:', response?.data?.length, 'users');
-      this.filteredData = response.data || [];
-      this.applyLocalFilters();
-
-      // Hide loading after a short delay to ensure visibility
-      setTimeout(() => {
-        this.hideLoadingIndicator();
-      }, 300);
-    });
-  }
-
   applyLocalFilters() {
-    let filtered = this.filteredData;
+    let filtered = [...this.data];
 
-    // Apply search query
     if (this.searchQuery) {
       filtered = filtered.filter(user =>
         user.username.toLowerCase().includes(this.searchQuery)
       );
     }
 
-    // Store temporarily for rendering
-    const tempFiltered = this.filteredData;
     this.filteredData = filtered;
     this.render();
-    this.filteredData = tempFiltered;
   }
 
   handleSort(column) {
@@ -244,10 +295,7 @@ class SidePanelController {
       let aVal = a[column];
       let bVal = b[column];
       const multiplier = this.sortDirection === 'asc' ? 1 : -1;
-
-      if (typeof aVal === 'string') {
-        return aVal.localeCompare(bVal) * multiplier;
-      }
+      if (typeof aVal === 'string') return aVal.localeCompare(bVal) * multiplier;
       return (aVal - bVal) * multiplier;
     });
 
@@ -279,12 +327,8 @@ class SidePanelController {
         <td>${this.escapeHtml(topModel)}</td>
       `;
 
-      // Click entire row to toggle details
       row.style.cursor = 'pointer';
-      row.addEventListener('click', () => {
-        this.toggleUserDetails(user.username, row);
-      });
-
+      row.addEventListener('click', () => this.toggleUserDetails(user.username, row));
       tbody.appendChild(row);
     });
 
@@ -296,14 +340,12 @@ class SidePanelController {
     const models = user.breakdown.byModel;
     let topModel = 'N/A';
     let maxCost = 0;
-
     for (const [model, cost] of Object.entries(models)) {
       if (cost > maxCost) {
         maxCost = cost;
         topModel = model.replace(' Usage', '');
       }
     }
-
     return topModel;
   }
 
@@ -322,25 +364,19 @@ class SidePanelController {
 
   toggleUserDetails(username, row) {
     const existingDetails = row.nextElementSibling;
-
-    // If details row already exists, remove it
     if (existingDetails && existingDetails.classList.contains('details-row-expanded')) {
       existingDetails.remove();
       return;
     }
 
-    // Close any other open details
     document.querySelectorAll('.details-row-expanded').forEach(el => el.remove());
 
-    // Use filteredData to reflect current filters
     const user = this.filteredData.find(u => u.username === username);
     if (!user) return;
 
-    // Sort dates chronologically
     const sortedDates = Object.entries(user.breakdown.byDate)
       .sort((a, b) => a[0].localeCompare(b[0]));
 
-    // Create details row with cost per day table
     const detailsRow = document.createElement('tr');
     detailsRow.classList.add('details-row-expanded');
 
@@ -350,12 +386,7 @@ class SidePanelController {
           <div class="details-section full-width">
             <h4>Cost Per Day</h4>
             <table class="cost-per-day-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Cost</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Date</th><th>Cost</th></tr></thead>
               <tbody>
                 ${sortedDates.map(([date, cost]) => `
                   <tr>
@@ -414,46 +445,15 @@ class SidePanelController {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
 
-  switchTab(tab) {
-    this.activeTab = tab;
-    document.querySelectorAll('.tab').forEach(t => {
-      t.classList.toggle('active', t.dataset.tab === tab);
-    });
-  }
-
-  async refreshData() {
-    console.log('[Claude Extension] Refresh button clicked');
-
-    // Show loading indicator
-    this.showLoadingIndicator();
-
-    // Reload date range from storage first
-    try {
-      const response = await chrome.runtime.sendMessage({ action: 'GET_PROCESSED_DATA' });
-      if (response.dateRange) {
-        console.log('[Claude Extension] Refreshing with date range:', response.dateRange);
-        document.getElementById('date-from').value = response.dateRange.startDate;
-        document.getElementById('date-to').value = response.dateRange.endDate;
-      }
-    } catch (error) {
-      console.error('[Claude Extension] Failed to reload date range:', error);
-    }
-
-    // Apply current filters when refreshing (this will trigger the filter logic)
-    this.applyFilters();
-  }
-
   showLoading() {
     document.getElementById('table-body').innerHTML = `
-      <tr><td colspan="5" class="loading">Loading...</td></tr>
+      <tr><td colspan="4" class="loading">Loading...</td></tr>
     `;
   }
 
   showEmptyState(message = 'No data available. Visit platform.claude.com to capture usage data.') {
     document.getElementById('table-body').innerHTML = `
-      <tr><td colspan="5" class="empty-state">
-        <p>${message}</p>
-      </td></tr>
+      <tr><td colspan="4" class="empty-state"><p>${message}</p></td></tr>
     `;
   }
 
