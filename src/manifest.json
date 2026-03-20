@@ -1,0 +1,51 @@
+{
+  "manifest_version": 3,
+  "name": "Claude Usage Ranking",
+  "version": "1.0.0",
+  "description": "Track Claude API usage costs and user rankings",
+
+  "permissions": [
+    "storage",
+    "cookies",
+    "sidePanel",
+    "tabs"
+  ],
+
+  "host_permissions": [
+    "https://platform.claude.com/*"
+  ],
+
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+
+  "action": {
+    "default_title": "Claude Usage Ranking",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+
+  "side_panel": {
+    "default_path": "sidepanel/sidepanel.html"
+  },
+
+  "content_scripts": [{
+    "matches": ["https://platform.claude.com/*"],
+    "js": ["content-script.js"],
+    "run_at": "document_start"
+  }],
+
+  "web_accessible_resources": [{
+    "resources": ["injected-script.js"],
+    "matches": ["https://platform.claude.com/*"]
+  }],
+
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}

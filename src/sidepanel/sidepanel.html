@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="sidepanel.css">
+  <title>Claude Usage Ranking</title>
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Claude Usage Ranking</h1>
+      <div class="header-right">
+        <span id="loading-indicator" class="loading-indicator" style="display: none;">
+          <span class="spinner"></span>
+          Fetching...
+        </span>
+        <button id="theme-toggle" class="btn-icon" title="Toggle Dark Mode">🌙</button>
+        <button id="refresh-btn" class="btn-icon" title="Refresh">↻</button>
+      </div>
+    </header>
+
+    <!-- Stats Summary -->
+    <div class="stats-summary">
+      <div class="stat-card">
+        <div class="stat-label">Total Cost</div>
+        <div class="stat-value" id="total-cost">$0.00</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Users</div>
+        <div class="stat-value" id="user-count">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Last Updated</div>
+        <div class="stat-value small" id="last-updated">--</div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <div class="filter-row">
+        <label>Search: <input type="text" id="search-input" placeholder="Filter by username..."></label>
+        <label>From: <input type="date" id="date-from"></label>
+        <label>To: <input type="date" id="date-to"></label>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <table id="data-table">
+        <thead>
+          <tr>
+            <th data-sort="rank">#</th>
+            <th data-sort="username">User</th>
+            <th data-sort="totalCost">Total Cost</th>
+            <th>Top Model</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </div>
+  <script src="sidepanel.js" type="module"></script>
+</body>
+</html>
