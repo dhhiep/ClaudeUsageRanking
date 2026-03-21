@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy — Claude Usage Ranking</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      max-width: 680px;
+      margin: 40px auto;
+      padding: 0 24px;
+      color: #1a1a1a;
+      line-height: 1.7;
+    }
+    h1 { font-size: 1.6rem; margin-bottom: 4px; }
+    h2 { font-size: 1.1rem; margin-top: 2rem; }
+    p, li { font-size: 0.97rem; color: #333; }
+    ul { padding-left: 1.4rem; }
+    .meta { color: #666; font-size: 0.875rem; margin-bottom: 2rem; }
+    a { color: #0066cc; }
+  </style>
+</head>
+<body>
+  <h1>Privacy Policy</h1>
+  <p class="meta">Claude Usage Ranking Chrome Extension &mdash; Last updated: March 2026</p>
+
+  <p>Claude Usage Ranking does <strong>not</strong> collect, store, or transmit any personal user data to any external server or third party.</p>
+
+  <h2>Data Access</h2>
+  <p>The extension accesses the following data solely to display Claude API usage information from <code>platform.claude.com</code>:</p>
+  <ul>
+    <li><strong>Session cookie</strong> — read once per request to authenticate API calls to <code>platform.claude.com</code>. Never stored, logged, or transmitted elsewhere.</li>
+    <li><strong>Organization &amp; workspace IDs</strong> — read from the Claude platform page DOM. Stored only in local Chrome storage within your browser.</li>
+    <li><strong>Usage data</strong> — fetched from <code>platform.claude.com</code> and cached locally per date for performance. Never leaves your browser.</li>
+  </ul>
+
+  <h2>Local Storage Only</h2>
+  <p>All data persisted by this extension is stored exclusively in Chrome's local storage on your device. This includes:</p>
+  <ul>
+    <li>Cached usage data (per-date)</li>
+    <li>User preferences (theme, cache mode, date range)</li>
+    <li>Organization and workspace IDs</li>
+  </ul>
+
+  <h2>No External Transmission</h2>
+  <p>The extension makes network requests <strong>only</strong> to <code>https://platform.claude.com</code> — the same domain you are already authenticated with. No data is sent to any other server, including the developer's servers.</p>
+
+  <h2>No Tracking</h2>
+  <p>The extension contains no analytics, telemetry, advertising SDKs, or tracking of any kind.</p>
+
+  <h2>Permissions</h2>
+  <ul>
+    <li><strong>cookies</strong> — authenticate API requests to <code>platform.claude.com</code></li>
+    <li><strong>storage</strong> — cache usage data and preferences locally in your browser</li>
+    <li><strong>tabs</strong> — detect navigation to the Claude platform cost page for auto-sync</li>
+    <li><strong>sidePanel</strong> — display the ranking UI in Chrome's side panel</li>
+    <li><strong>host_permissions: platform.claude.com</strong> — scope all requests strictly to Anthropic's platform</li>
+  </ul>
+
+  <h2>Contact</h2>
+  <p>Questions? Open an issue on <a href="https://github.com/cs-ventures/cc-ranking" target="_blank">GitHub</a>.</p>
+</body>
+</html>
