@@ -162,10 +162,10 @@ async function fetchUsageCost(orgId, wsId, startDate, endDate) {
 // --- Incremental cache logic ---
 
 // Find missing date ranges that need fetching
-function getMissingDateRanges(requestedStart, requestedEnd, cachedDates, today) {
+function getMissingDateRanges(requestedStart, requestedEnd, cachedDates, today, alwaysRefreshToday = true) {
   const requested = getDateRange(requestedStart, requestedEnd);
   const cachedSet = new Set(cachedDates);
-  const missing = requested.filter(d => d === today || !cachedSet.has(d));
+  const missing = requested.filter(d => (alwaysRefreshToday && d === today) || !cachedSet.has(d));
 
   if (missing.length === 0) return [];
 
@@ -189,7 +189,8 @@ function getMissingDateRanges(requestedStart, requestedEnd, cachedDates, today) 
 
 // Main fetch orchestrator: fetch missing dates, merge into cache, return processed data
 // useCache=true: only fetch missing dates; useCache=false: fetch entire range fresh
-async function fetchAndMergeData(dateFrom, dateTo, useCache = true) {
+// alwaysRefreshToday=true: always re-fetch today even if cached
+async function fetchAndMergeData(dateFrom, dateTo, useCache = true, alwaysRefreshToday = true) {
   const storage = await chrome.storage.local.get(['orgId', 'workspaceId', 'apiKeys', 'apiKeysLastUpdated', 'usageCosts', 'cachedDates']);
   const { orgId, workspaceId } = storage;
 
@@ -220,8 +221,8 @@ async function fetchAndMergeData(dateFrom, dateTo, useCache = true) {
   const today = getTodayStr();
 
   // Calculate missing date ranges (when cache off, cachedDates is empty so everything is "missing")
-  const missingRanges = getMissingDateRanges(dateFrom, dateTo, cachedDates, today);
-  console.log(`[Claude Extension] Cache=${useCache}, missing ranges:`, missingRanges);
+  const missingRanges = getMissingDateRanges(dateFrom, dateTo, cachedDates, today, alwaysRefreshToday);
+  console.log(`[Claude Extension] Cache=${useCache}, alwaysRefreshToday=${alwaysRefreshToday}, missing ranges:`, missingRanges);
 
   // Fetch missing ranges
   let newCosts = {};
@@ -244,10 +245,11 @@ async function fetchAndMergeData(dateFrom, dateTo, useCache = true) {
   // Merge new costs into existing cache
   const mergedCosts = { ...existingCosts, ...newCosts };
 
-  // Update cachedDates: add newly fetched past dates (not today)
+  // Update cachedDates: add newly fetched dates
+  // Today is only cached when alwaysRefreshToday=false (so subsequent fetches skip it)
   const newCachedDates = new Set(cachedDates);
   for (const date of Object.keys(newCosts)) {
-    if (date !== today) {
+    if (date !== today || !alwaysRefreshToday) {
       newCachedDates.add(date);
     }
   }
@@ -290,7 +292,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   // Phase 4: Side panel requests data for a date range (triggers smart fetch)
   if (message.action === 'FETCH_DATE_RANGE') {
-    fetchAndMergeData(message.dateFrom, message.dateTo, message.useCache).then(sendResponse).catch(error => {
+    fetchAndMergeData(message.dateFrom, message.dateTo, message.useCache, message.alwaysRefreshToday !== false).then(sendResponse).catch(error => {
       console.error('[Claude Extension] FETCH_DATE_RANGE error:', error);
       sendResponse({ error: error.message, data: [] });
     });
