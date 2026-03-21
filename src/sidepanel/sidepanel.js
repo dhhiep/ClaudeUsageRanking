@@ -7,6 +7,7 @@ class SidePanelController {
     this.sortDirection = 'desc';
     this.theme = 'auto';
     this.useCache = true;
+    this.alwaysRefreshToday = true;
 
     this.init();
   }
@@ -71,10 +72,12 @@ class SidePanelController {
   }
 
   loadTheme() {
-    chrome.storage.local.get(['theme'], (result) => {
+    chrome.storage.local.get(['theme', 'alwaysRefreshToday'], (result) => {
       this.theme = result.theme || 'auto';
+      this.alwaysRefreshToday = result.alwaysRefreshToday !== false; // default true
       this.applyTheme();
       this.updateThemeButton();
+      this.updateCacheUI();
     });
   }
 
@@ -120,6 +123,13 @@ class SidePanelController {
     this.updateCacheUI();
   }
 
+  toggleAlwaysRefreshToday() {
+    this.alwaysRefreshToday = !this.alwaysRefreshToday;
+    chrome.storage.local.set({ alwaysRefreshToday: this.alwaysRefreshToday });
+    this.updateCacheUI();
+    this.closeCacheDropdown();
+  }
+
   async clearCache() {
     await chrome.storage.local.remove(['usageCosts', 'cachedDates']);
     this.closeCacheDropdown();
@@ -134,6 +144,11 @@ class SidePanelController {
     toggleOption.innerHTML = `
       <span class="dropdown-icon">${this.useCache ? '✓' : ''}</span>
       <span>Cache ${this.useCache ? 'enabled' : 'disabled'}</span>
+    `;
+    const refreshTodayOption = document.getElementById('cache-refresh-today-option');
+    refreshTodayOption.innerHTML = `
+      <span class="dropdown-icon">${this.alwaysRefreshToday ? '✓' : ''}</span>
+      <span>Always refresh today</span>
     `;
   }
 
@@ -155,6 +170,10 @@ class SidePanelController {
     document.getElementById('cache-toggle-option').addEventListener('click', (e) => {
       e.stopPropagation();
       this.toggleCache();
+    });
+    document.getElementById('cache-refresh-today-option').addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleAlwaysRefreshToday();
     });
     document.getElementById('cache-clear-option').addEventListener('click', (e) => {
       e.stopPropagation();
@@ -275,7 +294,8 @@ class SidePanelController {
         action: 'FETCH_DATE_RANGE',
         dateFrom,
         dateTo,
-        useCache: this.useCache
+        useCache: this.useCache,
+        alwaysRefreshToday: this.alwaysRefreshToday
       });
 
       if (response.error) {
