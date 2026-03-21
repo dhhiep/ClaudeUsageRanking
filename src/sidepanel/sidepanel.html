@@ -25,7 +25,19 @@
           <span class="spinner"></span>
           Fetching...
         </span>
-        <button id="cache-toggle" class="btn-icon" title="Cache: on">💾</button>
+        <div class="dropdown-wrapper">
+          <button id="cache-toggle" class="btn-icon" title="Cache: on">💾</button>
+          <div id="cache-dropdown" class="dropdown-menu">
+            <button id="cache-toggle-option" class="dropdown-item">
+              <span class="dropdown-icon">✓</span>
+              <span>Cache enabled</span>
+            </button>
+            <button id="cache-clear-option" class="dropdown-item">
+              <span class="dropdown-icon">🗑</span>
+              <span>Clear cache</span>
+            </button>
+          </div>
+        </div>
         <button id="theme-toggle" class="btn-icon" title="Toggle Dark Mode">🌙</button>
         <button id="refresh-btn" class="btn-icon" title="Refresh">↻</button>
       </div>

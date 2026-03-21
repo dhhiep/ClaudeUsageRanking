@@ -105,15 +105,36 @@ class SidePanelController {
     this.updateThemeButton();
   }
 
-  toggleCache() {
-    this.useCache = !this.useCache;
-    this.updateCacheButton();
+  toggleCacheDropdown() {
+    const dropdown = document.getElementById('cache-dropdown');
+    const isOpen = dropdown.classList.contains('open');
+    dropdown.classList.toggle('open', !isOpen);
   }
 
-  updateCacheButton() {
+  closeCacheDropdown() {
+    document.getElementById('cache-dropdown').classList.remove('open');
+  }
+
+  toggleCache() {
+    this.useCache = !this.useCache;
+    this.updateCacheUI();
+  }
+
+  async clearCache() {
+    await chrome.storage.local.remove(['usageCosts', 'cachedDates']);
+    this.closeCacheDropdown();
+    this.showToast('Cache cleared', 'info', 2000);
+  }
+
+  updateCacheUI() {
     const btn = document.getElementById('cache-toggle');
     btn.textContent = this.useCache ? '💾' : '⚡';
     btn.title = `Cache: ${this.useCache ? 'on' : 'off'}`;
+    const toggleOption = document.getElementById('cache-toggle-option');
+    toggleOption.innerHTML = `
+      <span class="dropdown-icon">${this.useCache ? '✓' : ''}</span>
+      <span>Cache ${this.useCache ? 'enabled' : 'disabled'}</span>
+    `;
   }
 
   showLoadingIndicator() {
@@ -127,7 +148,20 @@ class SidePanelController {
   }
 
   attachEventListeners() {
-    document.getElementById('cache-toggle').addEventListener('click', () => this.toggleCache());
+    document.getElementById('cache-toggle').addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleCacheDropdown();
+    });
+    document.getElementById('cache-toggle-option').addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleCache();
+    });
+    document.getElementById('cache-clear-option').addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.clearCache();
+    });
+    // Click outside closes dropdown
+    document.addEventListener('click', () => this.closeCacheDropdown());
     document.getElementById('theme-toggle').addEventListener('click', () => this.cycleTheme());
     document.getElementById('refresh-btn').addEventListener('click', () => this.fetchData());
 
