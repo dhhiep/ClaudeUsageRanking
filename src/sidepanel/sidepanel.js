@@ -14,10 +14,9 @@ class SidePanelController {
 
   async init() {
     this.setupMessageListener();
-    this.loadTheme();
     this.attachEventListeners();
     this.setupNavigatePrompt();
-    this.setDefaultDates();
+    await this.loadSettings(); // loads theme + restores dates/search, sets defaults if none saved
     await this.checkActivation();
   }
 
@@ -71,13 +70,32 @@ class SidePanelController {
     });
   }
 
-  loadTheme() {
-    chrome.storage.local.get(['theme', 'alwaysRefreshToday'], (result) => {
-      this.theme = result.theme || 'auto';
-      this.alwaysRefreshToday = result.alwaysRefreshToday !== false; // default true
-      this.applyTheme();
-      this.updateThemeButton();
-      this.updateCacheUI();
+  async loadSettings() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get(['theme', 'alwaysRefreshToday', 'savedSearch', 'savedDateFrom', 'savedDateTo', 'savedPreset'], (result) => {
+        this.theme = result.theme || 'auto';
+        this.alwaysRefreshToday = result.alwaysRefreshToday !== false; // default true
+        this.applyTheme();
+        this.updateThemeButton();
+        this.updateCacheUI();
+
+        // Restore search query
+        if (result.savedSearch) {
+          this.searchQuery = result.savedSearch;
+          document.getElementById('search-input').value = result.savedSearch;
+        }
+
+        // Restore date range if saved, otherwise apply default preset
+        if (result.savedDateFrom && result.savedDateTo) {
+          document.getElementById('date-from').value = result.savedDateFrom;
+          document.getElementById('date-to').value = result.savedDateTo;
+          document.getElementById('date-preset').value = result.savedPreset || 'custom';
+        } else {
+          this.applyPreset('mtd');
+        }
+
+        resolve();
+      });
     });
   }
 
@@ -184,9 +202,10 @@ class SidePanelController {
     document.getElementById('theme-toggle').addEventListener('click', () => this.cycleTheme());
     document.getElementById('refresh-btn').addEventListener('click', () => this.fetchData());
 
-    // Search input — real-time local filter
+    // Search input — real-time local filter + persist
     document.getElementById('search-input').addEventListener('input', (e) => {
       this.searchQuery = e.target.value.toLowerCase();
+      chrome.storage.local.set({ savedSearch: this.searchQuery });
       this.applyLocalFilters();
     });
 
@@ -194,17 +213,20 @@ class SidePanelController {
     document.getElementById('date-preset').addEventListener('change', (e) => {
       if (e.target.value !== 'custom') {
         this.applyPreset(e.target.value);
+        this.saveDateSettings();
         this.fetchData();
       }
     });
 
-    // Date pickers — trigger fetch and auto-detect matching preset
+    // Date pickers — trigger fetch, auto-detect preset, persist
     document.getElementById('date-from').addEventListener('change', () => {
       this.syncPresetFromDates();
+      this.saveDateSettings();
       this.fetchData();
     });
     document.getElementById('date-to').addEventListener('change', () => {
       this.syncPresetFromDates();
+      this.saveDateSettings();
       this.fetchData();
     });
 
@@ -244,6 +266,10 @@ class SidePanelController {
         return { from: daysAgo(6), to: todayStr };
       case 'last_30_days':
         return { from: daysAgo(29), to: todayStr };
+      case 'last_60_days':
+        return { from: daysAgo(59), to: todayStr };
+      case 'last_90_days':
+        return { from: daysAgo(89), to: todayStr };
       case 'last_month':
         return { from: utcDate(y, m - 1, 1), to: utcDate(y, m, 0) };
       case 'mtd':
@@ -264,7 +290,7 @@ class SidePanelController {
   syncPresetFromDates() {
     const dateFrom = document.getElementById('date-from').value;
     const dateTo = document.getElementById('date-to').value;
-    const presets = ['mtd', 'today', 'yesterday', 'last_7_days', 'last_30_days', 'last_month'];
+    const presets = ['mtd', 'today', 'yesterday', 'last_7_days', 'last_30_days', 'last_60_days', 'last_90_days', 'last_month'];
 
     for (const preset of presets) {
       const { from, to } = this.getPresetDates(preset);
@@ -274,6 +300,14 @@ class SidePanelController {
       }
     }
     document.getElementById('date-preset').value = 'custom';
+  }
+
+  saveDateSettings() {
+    chrome.storage.local.set({
+      savedDateFrom: document.getElementById('date-from').value,
+      savedDateTo: document.getElementById('date-to').value,
+      savedPreset: document.getElementById('date-preset').value,
+    });
   }
 
   formatDateValue(date) {
@@ -305,8 +339,7 @@ class SidePanelController {
 
       if (response.data && response.data.length > 0) {
         this.data = response.data;
-        this.filteredData = [...this.data];
-        this.render();
+        this.applyLocalFilters(); // re-apply search query on fresh data
         this.updateFooter(response.lastUpdated);
       } else {
         this.showEmptyState();
