@@ -1,3 +1,15 @@
+Version 1.0.2 (2026-03-23)
+
+🎨 Improved
+• 🔍 Add padding to username filter input for better UX
+• 📊 Right-align Total Cost header with values
+• 🏆 Highlight top 3 ranks (red) and top 4-10 (orange)
+
+🐛 Fixed
+• 🧹 Remove duplicate CSS rule for search input
+
+---
+
 Version 1.0.1 (2026-03-23)
 
 ✨ Added
