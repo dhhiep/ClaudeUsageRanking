@@ -1,0 +1,23 @@
+Version 1.0.1 (2026-03-23)
+
+✨ Added
+• 📦 Release script for automated builds
+• 📅 60-day and 90-day date range presets
+
+🔄 Changed
+• 💾 Persist search and date range settings across sessions
+
+🐛 Fixed
+• 🔧 Settings now persist correctly when switching between tabs
+
+---
+
+Version 1.0.0 (2026-03-23)
+
+✨ Added
+• 🚀 Initial release of Claude Usage Ranking extension
+• 📊 View usage statistics and rankings for Claude conversations
+• 🔍 Search functionality for filtering conversations
+• 📅 Date range filtering with preset options (7, 14, 30 days)
+• 📈 Token usage visualization
+• 📤 Export data capability
