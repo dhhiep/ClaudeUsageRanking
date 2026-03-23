@@ -306,6 +306,10 @@ body.theme-dark .filter-row label {
 
 #search-input {
   flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 12px;
 }
 
 body.theme-dark .filter-row input[type="date"],
@@ -390,7 +394,8 @@ tbody tr:hover {
   background: #f9f9f9;
 }
 
-.cost-cell {
+.cost-cell,
+th[data-sort="totalCost"] {
   font-family: 'SF Mono', Monaco, monospace;
   text-align: right;
 }
@@ -399,6 +404,40 @@ tbody tr:hover {
   font-weight: 600;
   color: #666;
   width: 40px;
+}
+
+/* Top rank highlights */
+.rank-top-3 {
+  background: linear-gradient(90deg, #ffe5e5 0%, transparent 100%);
+}
+
+.rank-top-3 .rank-cell {
+  color: #cc0000;
+  font-weight: 700;
+}
+
+.rank-top-10:not(.rank-top-3) {
+  background: linear-gradient(90deg, #fff3e0 0%, transparent 100%);
+}
+
+.rank-top-10:not(.rank-top-3) .rank-cell {
+  color: #e65100;
+}
+
+body.theme-dark .rank-top-3 {
+  background: linear-gradient(90deg, #3a1a1a 0%, transparent 100%);
+}
+
+body.theme-dark .rank-top-3 .rank-cell {
+  color: #ff6666;
+}
+
+body.theme-dark .rank-top-10:not(.rank-top-3) {
+  background: linear-gradient(90deg, #3a2a1a 0%, transparent 100%);
+}
+
+body.theme-dark .rank-top-10:not(.rank-top-3) .rank-cell {
+  color: #ffab40;
 }
 
 .details-btn {
@@ -504,10 +543,6 @@ tbody tr {
 
 tbody tr:hover {
   background: #f0f0f0;
-}
-
-#search-input {
-  flex: 1;
 }
 
 /* Loading Indicator */

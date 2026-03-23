@@ -401,9 +401,14 @@ class SidePanelController {
     this.filteredData.forEach((user, index) => {
       const topModel = this.getTopModel(user);
       const row = document.createElement('tr');
+      const rank = index + 1;
+
+      // Add rank highlight classes
+      if (rank <= 3) row.classList.add('rank-top-3');
+      else if (rank <= 10) row.classList.add('rank-top-10');
 
       row.innerHTML = `
-        <td class="rank-cell">${index + 1}</td>
+        <td class="rank-cell">${rank}</td>
         <td>${this.escapeHtml(user.username)}</td>
         <td class="cost-cell">$${(user.totalCost / 100).toFixed(2)}</td>
         <td>${this.escapeHtml(topModel)}</td>
