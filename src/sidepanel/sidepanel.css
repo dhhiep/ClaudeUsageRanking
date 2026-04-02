@@ -5,7 +5,8 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 13px;
   height: 100vh;
 }
@@ -75,7 +76,9 @@ body.theme-dark .header {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Stats Summary */
@@ -123,7 +126,8 @@ body.theme-dark .stat-label {
   font-size: 20px;
   font-weight: 700;
   color: #1a1a1a;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 body.theme-dark .stat-value {
@@ -227,6 +231,26 @@ body.theme-dark .dropdown-item + .dropdown-item {
   width: 16px;
   text-align: center;
   font-size: 12px;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: #e8e8e8;
+  margin: 4px 0;
+}
+
+body.theme-dark .dropdown-divider {
+  background: #3a3a3a;
+}
+
+/* Active state for reload button when auto-reload is on */
+.btn-icon.active {
+  color: #2196f3;
+}
+
+#reload-toggle {
+  font-size: 22px;
+  line-height: 1;
 }
 
 /* Tabs */
@@ -346,7 +370,8 @@ table {
   border-collapse: collapse;
 }
 
-th, td {
+th,
+td {
   padding: 8px 12px;
   text-align: left;
   border-bottom: 1px solid #e8e8e8;
@@ -376,17 +401,17 @@ body.theme-dark th:hover {
 }
 
 th[data-sort]::after {
-  content: '';
+  content: "";
   margin-left: 4px;
 }
 
 th.sort-asc::after {
-  content: '▲';
+  content: "▲";
   font-size: 10px;
 }
 
 th.sort-desc::after {
-  content: '▼';
+  content: "▼";
   font-size: 10px;
 }
 
@@ -396,7 +421,7 @@ tbody tr:hover {
 
 .cost-cell,
 th[data-sort="totalCost"] {
-  font-family: 'SF Mono', Monaco, monospace;
+  font-family: "SF Mono", Monaco, monospace;
   text-align: right;
 }
 
@@ -656,7 +681,9 @@ body.theme-dark .navigate-prompt-current {
   z-index: 1000;
   opacity: 0;
   transform: translateY(10px);
-  transition: opacity 0.2s, transform 0.2s;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
   pointer-events: none;
 }
 

@@ -8,6 +8,8 @@ class SidePanelController {
     this.theme = 'auto';
     this.useCache = true;
     this.alwaysRefreshToday = true;
+    this.autoReloadInterval = 0; // seconds; 0 = off
+    this._autoReloadTimer = null;
 
     this.init();
   }
@@ -72,12 +74,15 @@ class SidePanelController {
 
   async loadSettings() {
     return new Promise((resolve) => {
-      chrome.storage.local.get(['theme', 'alwaysRefreshToday', 'savedSearch', 'savedDateFrom', 'savedDateTo', 'savedPreset'], (result) => {
+      chrome.storage.local.get(['theme', 'alwaysRefreshToday', 'savedSearch', 'savedDateFrom', 'savedDateTo', 'savedPreset', 'autoReloadInterval'], (result) => {
         this.theme = result.theme || 'auto';
         this.alwaysRefreshToday = result.alwaysRefreshToday !== false; // default true
+        this.autoReloadInterval = result.autoReloadInterval || 0;
         this.applyTheme();
         this.updateThemeButton();
         this.updateCacheUI();
+        this.updateReloadUI();
+        this.scheduleAutoReload();
 
         // Restore search query
         if (result.savedSearch) {
@@ -170,6 +175,43 @@ class SidePanelController {
     `;
   }
 
+  toggleReloadDropdown() {
+    const dropdown = document.getElementById('reload-dropdown');
+    const isOpen = dropdown.classList.contains('open');
+    dropdown.classList.toggle('open', !isOpen);
+  }
+
+  closeReloadDropdown() {
+    document.getElementById('reload-dropdown').classList.remove('open');
+  }
+
+  setAutoReload(seconds) {
+    this.autoReloadInterval = seconds;
+    chrome.storage.local.set({ autoReloadInterval: seconds });
+    this.updateReloadUI();
+    this.scheduleAutoReload();
+    this.closeReloadDropdown();
+  }
+
+  scheduleAutoReload() {
+    clearInterval(this._autoReloadTimer);
+    if (this.autoReloadInterval > 0) {
+      this._autoReloadTimer = setInterval(() => this.fetchData(), this.autoReloadInterval * 1000);
+    }
+  }
+
+  updateReloadUI() {
+    const btn = document.getElementById('reload-toggle');
+    const active = this.autoReloadInterval > 0;
+    btn.classList.toggle('active', active);
+    btn.title = active ? `Auto reload: every ${this.autoReloadInterval >= 60 ? this.autoReloadInterval / 60 + 'min' : this.autoReloadInterval + 's'}` : 'Auto reload: off';
+
+    document.querySelectorAll('.reload-interval-option').forEach(opt => {
+      const val = parseInt(opt.dataset.interval, 10);
+      opt.querySelector('.dropdown-icon').textContent = val === this.autoReloadInterval ? '✓' : '';
+    });
+  }
+
   showLoadingIndicator() {
     const indicator = document.getElementById('loading-indicator');
     if (indicator) indicator.style.display = 'flex';
@@ -197,10 +239,29 @@ class SidePanelController {
       e.stopPropagation();
       this.clearCache();
     });
-    // Click outside closes dropdown
-    document.addEventListener('click', () => this.closeCacheDropdown());
+    // Reload dropdown
+    document.getElementById('reload-toggle').addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.toggleReloadDropdown();
+    });
+    document.getElementById('reload-now-option').addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.closeReloadDropdown();
+      this.fetchData();
+    });
+    document.querySelectorAll('.reload-interval-option').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.setAutoReload(parseInt(btn.dataset.interval, 10));
+      });
+    });
+
+    // Click outside closes both dropdowns
+    document.addEventListener('click', () => {
+      this.closeCacheDropdown();
+      this.closeReloadDropdown();
+    });
     document.getElementById('theme-toggle').addEventListener('click', () => this.cycleTheme());
-    document.getElementById('refresh-btn').addEventListener('click', () => this.fetchData());
 
     // Search input — real-time local filter + persist
     document.getElementById('search-input').addEventListener('input', (e) => {
